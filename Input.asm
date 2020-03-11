@@ -1,70 +1,37 @@
+%include "InputMacro.inc"
+%include "Macros.inc"
+
 section .data
-	width_text db "Inserte ancho de la imagen: "
-	height_text db "Inserte largo de la imagen: "
+
+	kernel_array DW 0, -1, 0   ; defines the 3x3 filter kernel.
+			     DW -1, 5, -1
+				 DW 0, -1, 0
+
+	read_file_img db "unfiltered_img.txt", 0 	; file with no filtered image.
+	sharp_file db "sharpened.txt", 0   			; file with sharpened image.
+	oversharp_file db "oversharpened.txt", 0	; file with oversharpened image.
 
 section .bss
-	width resb 16
-	height resb 16
+	image_array resb 1920 * 1080 		; reserves memory for image data, maximum res is 1920x1080.
 
 section .text
 	global _start
 
 _start:
-	call _print_width
-	call _get_width
-	call _print_user_w
-	call _print_height
-	call _get_height
-	call _print_user_h
+	request_width   ; prompts request to enter image width.
+	get_width 		; gets width by user input.
+	request_height	; prompts request to enter image height.
+	get_height		; gets width by user input.
 
-	mov rax, 60
+	call _readFile
+	
+	mov rax, SYS_EXIT
 	mov rdi, 0
-	syscall
+	syscall			; exits the program.
 
-_get_width:
-	mov rax, 0
-	mov rdi, 0
-	mov rsi, width
-	mov rdx, 16
-	syscall
-	ret 
-
-_get_height:
-	mov rax, 0
-	mov rdi, 0
-	mov rsi, height
-	mov rdx, 16
-	syscall
-	ret 
-
-_print_user_w:
-	mov rax, 1
-	mov rdi, 1
-	mov rsi, width
-	mov rdx, 16
-	syscall
-	ret
-
-_print_user_h:
-	mov rax, 1
-	mov rdi, 1
-	mov rsi, height
-	mov rdx, 16
-	syscall
-	ret
-
-_print_width:
-	mov rax, 1
-	mov rdi, 1
-	mov rsi, width_text
-	mov rdx, 28
-	syscall
-	ret
-
-_print_height:
-	mov rax, 1
-	mov rdi, 1
-	mov rsi, height_text
-	mov rdx, 28
-	syscall
-	ret
+_readFile:
+	mov rax, SYS_OPEN
+    mov rdi, filename
+    mov rsi, O_RDWR
+    mov rdx, 0644o ; TODO: change this number to the correct one.
+    syscall
