@@ -1,11 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+from PIL import Image
+import sys
 
 
 def img_to_bmp(path_to_img):
     img = mpimg.imread(path_to_img)
     return img
+
+def to_bnw(input, output):
+    color_image = Image.open(input)
+    bw = color_image.convert('L')
+    bw.save(output)
 
 
 def flatten_rgb(bitmap):
@@ -54,6 +61,14 @@ def get_image_size():
     width = int(input("Inserte el ancho de imagen: "))
     height = int(input("Inserte el largo de imagen: "))
 
+def decode(file):
+    out_image_bin = open(file, 'r') 
+    lines = out_image_bin.readlines()
+    result = [] 
 
+    for line in lines:
+        result.append(int.from_bytes(line.encode('utf-8'), byteorder=sys.byteorder))
 
-write_x86_file(format_for_x86(flatten_rgb(img_to_bmp('bnw.jpeg'))))
+decode("new_file.txt")
+#to_bnw("caterpillar.jpg", "bnwcat.jpg")
+#write_x86_file(format_for_x86(flatten_rgb(img_to_bmp('bnw.jpeg'))))
