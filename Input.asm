@@ -13,8 +13,7 @@ section .data
 	oversharp_file db "oversharpened.txt", 0	; file with oversharpened image.
 
 section .bss
-	;image_array resb 1920 * 1080 		; reserves memory for image data, maximum res is 1920x1080.
-	current_pix resb 4
+	image_array resb 4		; reserves memory for image data, maximum res is 1920x1080.
 
 section .text
 	global _start
@@ -25,18 +24,10 @@ _start:
 	request_height	; prompts request to enter image height.
 	get_height		; gets width by user input.
 
-	call _readFile
-    call _writeFile
-	
-	mov rax, SYS_EXIT
-	mov rdi, 0
-	syscall			; exits the program.
+	call _openFile
+    call _endProgram
 
-_applySharpening:
-
-
-
-_readFile:
+_openFile:
     mov rax, SYS_OPEN
     mov rdi, read_file_img
     mov rsi, O_RDONLY
@@ -45,16 +36,42 @@ _readFile:
 
     push rax
     mov rdi, rax
+
+    mov r9d, [width] ; saves width on register. 
+    mov r10d, [height] ; saves height on register.
+    mov r8d, r9d ; sets loop counter = width.
+
+FileLoop:
+    mov [image_array], ecx
+
     mov rax, SYS_READ
-    mov rsi, current_pix
+    mov rsi, image_array
     mov rdx, 4
     syscall
 
-    mov rax, SYS_CLOSE
+    ; decrements the loop counter.
+    dec r8d
+    jnz FileLoop
+    jmp _endProgram
+
+;_printLines:
+;    mov [image_array], ecx
+;    dec ecx
+;    jnz _printLines
+;    jmp _endProgram
+
+_endProgram:
+
+    mov rax, SYS_CLOSE ; closes the file.
     pop rdi
-    
-    print current_pix
-    ret
+    syscall
+
+    call _writeFile ; writes file.
+    print image_array
+
+    mov rax, SYS_EXIT
+	mov rdi, 0
+	syscall			; exits the program.
 
 _writeFile:
 
@@ -67,7 +84,7 @@ _writeFile:
     push rax
     mov rdi, rax
     mov rax, SYS_WRITE
-    mov rsi, current_pix
+    mov rsi, image_array
     mov rdx, 4
     syscall
 
