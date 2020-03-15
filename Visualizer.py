@@ -14,6 +14,9 @@ def to_bnw(input, output):
     bw = color_image.convert('L')
     bw.save(output)
 
+def pad(flattened_bmp):
+    return np.pad(flattened_bmp, (1, 1), 'constant', constant_values=(0, 0))
+
 
 def flatten_rgb(bitmap):
     flattened_bmp = []
@@ -42,9 +45,12 @@ def format_for_x86(flattened_rgb):
     x86_lst = []
 
     for row in flattened_rgb:
+        print(len(row))
         for pixel in row:
             x86_lst.append(hex(pixel))
+
     return x86_lst
+
 
 def write_x86_file(pixel_lst):
     file = open("unfiltered_img.txt", "w")
@@ -69,6 +75,5 @@ def decode(file):
     for line in lines:
         result.append(int.from_bytes(line.encode('utf-8'), byteorder=sys.byteorder))
 
-decode("new_file.txt")
-#to_bnw("caterpillar.jpg", "bnwcat.jpg")
-#write_x86_file(format_for_x86(flatten_rgb(img_to_bmp('bnw.jpeg'))))
+
+format_for_x86(pad(flatten_rgb(img_to_bmp('bnw.jpeg'))))

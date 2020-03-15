@@ -13,7 +13,7 @@ section .data
 	oversharp_file db "oversharpened.txt", 0	; file with oversharpened image.
 
 section .bss
-	image_array resb 4		; reserves memory for image data, maximum res is 1920x1080.
+	image_array resb 5		; reserves memory for image data, maximum res is 1920x1080.
 
 section .text
 	global _start
@@ -24,50 +24,47 @@ _start:
 	request_height	; prompts request to enter image height.
 	get_height		; gets width by user input.
 
-	call _openFile
-    call _endProgram
-
-_openFile:
-    mov rax, SYS_OPEN
-    mov rdi, read_file_img
-    mov rsi, O_RDONLY
-    mov rdx, 0
-    syscall
-
-    push rax
-    mov rdi, rax
-
+    mov r12, 0 ; offset of reading a file.
     mov r9d, [width] ; saves width on register. 
     mov r10d, [height] ; saves height on register.
     mov r8d, r9d ; sets loop counter = width.
 
-FileLoop:
-    mov [image_array], ecx
+_getValuesOfImageLoop:
 
-    mov rax, SYS_READ
-    mov rsi, image_array
-    mov rdx, 4
+    mov rax, SYS_OPEN      ; opens the file.
+    mov rdi, read_file_img ; target file.
+    mov rsi, O_RDONLY      ; read only mode.
+    mov rdx, 0
     syscall
 
-    ; decrements the loop counter.
-    dec r8d
-    jnz FileLoop
-    jmp _endProgram
+    push rax
+    mov rdi, rax 
 
-;_printLines:
-;    mov [image_array], ecx
-;    dec ecx
-;    jnz _printLines
-;    jmp _endProgram
+    mov rax, SYS_LSEEK ; updates the file pointer.
+    mov rsi, r12 ; start of reading offset.
+    mov rdx, 0 ; offset reference point, 0 meaning the start of the file. 
+    syscall
 
-_endProgram:
+    mov rax, SYS_READ      ; reads file from where the pointer is.
+    mov rsi, image_array   ; store data read.
+    mov rdx, 5             ; bytes stored.
+    syscall
 
     mov rax, SYS_CLOSE ; closes the file.
     pop rdi
     syscall
 
-    call _writeFile ; writes file.
-    print image_array
+    add r12, 5 ; updates reading offset.
+
+    ;call _writeFile
+
+    ; decrements the loop counter.
+    dec r8d
+    jnz _getValuesOfImageLoop
+
+_endProgram:
+
+    ;call _writeFile ; writes file.
 
     mov rax, SYS_EXIT
 	mov rdi, 0
@@ -77,19 +74,18 @@ _writeFile:
 
 	mov rax, SYS_OPEN
     mov rdi, new_file
-    mov rsi, O_CREAT + O_WRONLY
-    mov rdx, 0644o
+    mov rsi, O_APPEND + O_WRONLY
+    mov rdx, 0666o
     syscall
 
     push rax
     mov rdi, rax
     mov rax, SYS_WRITE
     mov rsi, image_array
-    mov rdx, 4
+    mov rdx, 5
     syscall
 
     mov rax, SYS_CLOSE
     pop rdi
     syscall
 	ret
-
