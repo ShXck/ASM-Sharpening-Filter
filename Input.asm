@@ -13,7 +13,7 @@ section .data
 	oversharp_file db "oversharpened.txt", 0	; file with oversharpened image.
 
 section .bss
-	image_array resb 5		; reserves memory for image data, maximum res is 1920x1080.
+	pixel_value resb 3		; reserves memory for current pixel value.
 
 section .text
 	global _start
@@ -46,25 +46,33 @@ _getValuesOfImageLoop:
     syscall
 
     mov rax, SYS_READ      ; reads file from where the pointer is.
-    mov rsi, image_array   ; store data read.
-    mov rdx, 5             ; bytes stored.
+    mov rsi, pixel_value   ; store data read.
+    mov rdx, 3             ; bytes stored.
     syscall
 
     mov rax, SYS_CLOSE ; closes the file.
     pop rdi
     syscall
 
-    add r12, 5 ; updates reading offset.
-
-    ;call _writeFile
+    add r12, 3 ; updates reading offset. 3 bytes because each number is formatted for a len of 3.
 
     ; decrements the loop counter.
     dec r8d
     jnz _getValuesOfImageLoop
 
+_convolveImage:
+
+
 _endProgram:
 
-    ;call _writeFile ; writes file.
+    ;lea esi, [pixel_value] ; loads pixel value into esi register.
+    ;mov ecx, 3 ; loop counter, len of number.
+    ;call _string2int
+
+    ;add eax, 5
+    ;mov [pixel_value], eax  ; will write to ascii
+    
+    call _writeFile ; writes in file.
 
     mov rax, SYS_EXIT
 	mov rdi, 0
@@ -81,11 +89,24 @@ _writeFile:
     push rax
     mov rdi, rax
     mov rax, SYS_WRITE
-    mov rsi, image_array
-    mov rdx, 5
+    mov rsi, pixel_value
+    mov rdx, 3
     syscall
 
     mov rax, SYS_CLOSE
     pop rdi
     syscall
 	ret
+
+; converts chars to integer.
+_string2int:
+  xor ebx,ebx    ; clear ebx
+.next_digit:
+  movzx eax, byte[esi]
+  inc esi
+  sub al, '0'    ; convert from ASCII to number
+  imul ebx, 10
+  add ebx,eax   ; ebx = ebx*10 + eax
+  loop .next_digit  ; while (--ecx)
+  mov eax, ebx
+  ret

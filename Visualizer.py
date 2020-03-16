@@ -45,16 +45,15 @@ def format_for_x86(flattened_rgb):
     x86_lst = []
 
     for row in flattened_rgb:
-        print(len(row))
         for pixel in row:
-            x86_lst.append(hex(pixel))
+            x86_lst.append("{0:0=3d}".format(pixel))
 
     return x86_lst
 
 
 def write_x86_file(pixel_lst):
     file = open("unfiltered_img.txt", "w")
-    file.write('\n'.join(map(str, pixel_lst)))
+    file.write(''.join(map(str, pixel_lst)))
     file.close()
 
 
@@ -76,4 +75,4 @@ def decode(file):
         result.append(int.from_bytes(line.encode('utf-8'), byteorder=sys.byteorder))
 
 
-format_for_x86(pad(flatten_rgb(img_to_bmp('bnw.jpeg'))))
+write_x86_file(format_for_x86(flatten_rgb(img_to_bmp('bnw.jpeg'))))
