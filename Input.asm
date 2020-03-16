@@ -44,9 +44,36 @@ _start:
     call _string2int ; converts the value of height to an actual integer.
     mov r10d, eax     ; moves the integer value of height to r9d.
 
-    mov r8, r9 ; sets loop counter = width.
+    add r9, 4 ; adds 4 to the width position, this is where the first actual pixel will be after padding the array with zeros.
 
-_getValuesOfImageLoop:
+    mov r8, r9 ; sets first pixel to retrieve, pixel = width + 4.
+    mov r15, 0 ; sets 0 r15, which will store the final pixel convolution result.
+
+_convolveImage:
+    ; Getting the current pixel and the adjacent values for convolution with the kernel.
+
+    push r8                ; push the value of the current pixel position to the stack to preserve it for future use.
+
+    ; Operating middle pixel.
+    call _getPixelValue    ; gets the current pixel. Value is stored in pixel value.
+    call _pixel2int        ; converts the pixel value to integer. Return value is stored in rbx.
+    mov rax, rbx           ; loads the value of the integer conversion to rax.
+    imul rax, 5
+    mov r15, rax           ; stores the partial result in r15.
+
+    inc r8                 ; + 1 to current position, will give us the position of the right adjacent pixel.
+
+    ; Operating right adjacent
+    call _getPixelValue    ; gets the right adjacent pixel.
+    call _pixel2int        ; converts the pixel value to integer.
+    mov rax, rbx           ; loads the value of the integer conversion to rax.
+    imul rax, -1           ; multiples right adjacent by -1 (kernel)
+    add r15, rax           ; adds the partial result.
+
+    pop r8                 ; restores pixel position to original.
+    dec r8                 ; - 1 to current position, will give us the position of the left adjacent pixel. 
+
+_getPixelValue:
 
     mov rax, SYS_OPEN      ; opens the file.
     mov rdi, read_file_img ; target file.
@@ -76,11 +103,13 @@ _getValuesOfImageLoop:
     call _writeFile
 
     dec r8  ; decrements the loop counter.
-    jnz _getValuesOfImageLoop
-
+    jnz _getPixelValue
 
 ; Exits the program.
 _endProgram:
+
+    ;call _writeFile 
+
     mov rax, SYS_EXIT
 	mov rdi, 0
 	syscall			; exits the program.
@@ -105,6 +134,14 @@ _writeFile:
     pop rdi
     syscall
 	ret
+
+_pixel2int:
+    lea esi, [pixel_value] ; loads pixel value into esi.
+    mov ecx, 3     ; moves the len of pixel value into ecx.
+    call _string2int ; converts the pixel value to an actual integer.
+    mov rbx, rax     ; moves the integer pixel value to rbx.
+    ret
+
 
 ; converts chars to integer, return value is at eax.
 _string2int:
