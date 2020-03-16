@@ -23,11 +23,28 @@ _start:
 	get_width 		; gets width by user input.
 	request_height	; prompts request to enter image height.
 	get_height		; gets width by user input.
+    
+    ; Input data set up.
+    lea rbx, [width] ; loads width into rbx.
+    call _getLenChar ; gets the len of width.
+    mov r9, rcx      ; moves the len of width to r9.
 
-    mov r12, 0 ; offset of reading a file.
-    mov r9d, [width] ; saves width on register. 
-    mov r10d, [height] ; saves height on register.
-    mov r8d, r9d ; sets loop counter = width.
+    lea esi, [width] ; loads width into esi.
+    mov ecx, r9d     ; moves the len of width into ecx.
+    call _string2int ; converts the value of width to an actual integer.
+    mov r9d, eax     ; moves the integer value of width to r9d.
+
+
+    lea rbx, [height] ; loads height into rbx.
+    call _getLenChar  ; gets the len of height.
+    mov r10, rcx      ; moves the len of height to r9.
+
+    lea esi, [height] ; loads width into esi.
+    mov ecx, r10d     ; moves the len of height into ecx.
+    call _string2int ; converts the value of height to an actual integer.
+    mov r10d, eax     ; moves the integer value of height to r9d.
+
+    mov r8, r9 ; sets loop counter = width.
 
 _getValuesOfImageLoop:
 
@@ -56,28 +73,19 @@ _getValuesOfImageLoop:
 
     add r12, 3 ; updates reading offset. 3 bytes because each number is formatted for a len of 3.
 
-    ; decrements the loop counter.
-    dec r8d
+    call _writeFile
+
+    dec r8  ; decrements the loop counter.
     jnz _getValuesOfImageLoop
 
-_convolveImage:
 
-
+; Exits the program.
 _endProgram:
-
-    ;lea esi, [pixel_value] ; loads pixel value into esi register.
-    ;mov ecx, 3 ; loop counter, len of number.
-    ;call _string2int
-
-    ;add eax, 5
-    ;mov [pixel_value], eax  ; will write to ascii
-    
-    call _writeFile ; writes in file.
-
     mov rax, SYS_EXIT
 	mov rdi, 0
 	syscall			; exits the program.
 
+; Writes value of pixel_value to a file.
 _writeFile:
 
 	mov rax, SYS_OPEN
@@ -98,7 +106,7 @@ _writeFile:
     syscall
 	ret
 
-; converts chars to integer.
+; converts chars to integer, return value is at eax.
 _string2int:
   xor ebx,ebx    ; clear ebx
 .next_digit:
@@ -110,3 +118,17 @@ _string2int:
   loop .next_digit  ; while (--ecx)
   mov eax, ebx
   ret
+
+; Gets the len of a string and returns it to ecx. ; TODO: fix for len > 3
+_getLenChar:
+    push rbx
+    mov ecx,0
+    dec ebx
+    count:
+        inc ecx
+        inc ebx
+        cmp byte[ebx], 0
+        jnz count
+    sub ecx, 2
+    pop rbx
+    ret
