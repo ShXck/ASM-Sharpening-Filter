@@ -14,6 +14,7 @@ section .data
 
 section .bss
 	pixel_value resb 3		; reserves memory for current pixel value.
+    conv_result resb 3      ; reserves memory for pixel convolution result.
 
 section .text
 	global _start
@@ -44,37 +45,75 @@ _start:
     call _string2int ; converts the value of height to an actual integer.
     mov r10d, eax     ; moves the integer value of height to r9d.
 
-    add r9, 4 ; adds 4 to the width position, this is where the first actual pixel will be after padding the array with zeros.
-
-    mov r8, r9 ; sets first pixel to retrieve, pixel = width + 4.
+    mov r12, 0 ; sets the offset reading file.
+    mov r8, r9 ; moves the value of width to the counter.
+    add r8, 4  ; adds 4 to the width position, this is where the first actual pixel will be after padding the array with zeros.
     mov r15, 0 ; sets 0 r15, which will store the final pixel convolution result.
 
 _convolveImage:
     ; Getting the current pixel and the adjacent values for convolution with the kernel.
-
     push r8                ; push the value of the current pixel position to the stack to preserve it for future use.
 
     ; Operating middle pixel.
     call _getPixelValue    ; gets the current pixel. Value is stored in pixel value.
     call _pixel2int        ; converts the pixel value to integer. Return value is stored in rbx.
     mov rax, rbx           ; loads the value of the integer conversion to rax.
-    imul rax, 5
+    mov r13, 5             ; loads the multiplication factor of the center of the kernel (5)
+    mul r13                ; multiply the pixel value by the factor. Result is stored in rax.
     mov r15, rax           ; stores the partial result in r15.
 
-    inc r8                 ; + 1 to current position, will give us the position of the right adjacent pixel.
+    pop r8                 ; restores pixel position to original.
+    push r8                ; saves the original value again.
+    sub r8, 1              ; - 1 to current position, will give us the position of the left adjacent pixel.
 
-    ; Operating right adjacent
-    call _getPixelValue    ; gets the right adjacent pixel.
+    ; Operating left adjacent
+    call _getPixelValue    ; gets the left adjacent pixel.
     call _pixel2int        ; converts the pixel value to integer.
     mov rax, rbx           ; loads the value of the integer conversion to rax.
-    imul rax, -1           ; multiples right adjacent by -1 (kernel)
-    add r15, rax           ; adds the partial result.
+    sub r15, rax           ; The factor for this pixel is -1, so we just substract from the partial result the value of this pixel.
 
-    pop r8                 ; restores pixel position to original.
-    dec r8                 ; - 1 to current position, will give us the position of the left adjacent pixel. 
+    pop r8                 ; restores the original value.
+    push r8                ; saves the original value.
+    add r8, 1              ; + 1 to the current position, will give us the position to the right adjacent pixel.
+
+    ; Operating right adjacent
+    call _getPixelValue    ; gets the left adjacent pixel.
+    call _pixel2int        ; converts the pixel value to integer.
+    mov rax, rbx           ; loads the value of the integer conversion to rax.
+    sub r15, rax           ; The factor for this pixel is -1, so we just substract from the partial result the value of this pixel.
+
+    pop r8                 ; restores the original value.
+    push r8                ; saves the original value.
+    sub r8, r9             ; set the position to the upper adjacent pixel. pixel = position - size_of_padded_array.             
+    sub r8, 3 
+
+    ; Operating upper adjacent.
+    call _getPixelValue    ; gets the left adjacent pixel.      
+    call _pixel2int        ; converts the pixel value to integer.
+    mov rax, rbx           ; loads the value of the integer conversion to rax.
+    sub r15, rax           ; The factor for this pixel is -1, so we just substract from the partial result the value of this pixel.
+
+    pop r8                 ; restores the pixel value position to the original.
+    add r8, r8             ; multiplies current position by a factor of 2. 
+    sub r8, 2              ; adjust position to be the lower adjacent.
+
+    ; Operating lower adjacent.
+    call _getPixelValue    ; gets the left adjacent pixel.      
+    call _pixel2int        ; converts the pixel value to integer.
+    mov rax, rbx           ; loads the value of the integer conversion to rax.
+    sub r15, rax           ; The factor for this pixel is -1, so we just substract from the partial result the value of this pixel.
+    
+    ; Convolution of pixed is complete at this point.
+    mov [conv_result], r15d ; loads the result into memory.
+    ;lea esi, [conv_result]
+    ;mov ecx, 3
+    ;call _string2int
+    ;mov r15d, eax
+    ;mov [conv_result], r15d ; loads the result into memory.
+
+    jmp _endProgram        ; TESTING PURPOSES, WE NEED TO LOOP THIS TO GET ALL PIXELS.
 
 _getPixelValue:
-
     mov rax, SYS_OPEN      ; opens the file.
     mov rdi, read_file_img ; target file.
     mov rsi, O_RDONLY      ; read only mode.
@@ -100,15 +139,17 @@ _getPixelValue:
 
     add r12, 3 ; updates reading offset. 3 bytes because each number is formatted for a len of 3.
 
-    call _writeFile
+    ;call _writeFile
 
     dec r8  ; decrements the loop counter.
     jnz _getPixelValue
+    mov r12, 0 ; resets the offset
+    ret
 
 ; Exits the program.
 _endProgram:
 
-    ;call _writeFile 
+    call _writeFile 
 
     mov rax, SYS_EXIT
 	mov rdi, 0
@@ -116,6 +157,8 @@ _endProgram:
 
 ; Writes value of pixel_value to a file.
 _writeFile:
+
+    mov [conv_result], r15
 
 	mov rax, SYS_OPEN
     mov rdi, new_file
@@ -126,7 +169,7 @@ _writeFile:
     push rax
     mov rdi, rax
     mov rax, SYS_WRITE
-    mov rsi, pixel_value
+    mov rsi, conv_result ; TODO: Change for conv_result. 
     mov rdx, 3
     syscall
 
