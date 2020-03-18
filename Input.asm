@@ -38,16 +38,21 @@ _start:
 
     lea rbx, [height] ; loads height into rbx.
     call _getLenChar  ; gets the len of height.
-    mov r10, rcx      ; moves the len of height to r9.
+    mov r10, rcx      ; moves the len of height to r10.
 
     lea esi, [height] ; loads width into esi.
     mov ecx, r10d     ; moves the len of height into ecx.
     call _string2int ; converts the value of height to an actual integer.
-    mov r10d, eax     ; moves the integer value of height to r9d.
+    mov r10d, eax     ; moves the integer value of height to r10d.
 
-    mov r12, 0 ; sets the offset reading file.
+    mov r12, 0 ; starts the offset reading file.
+    mov r13, 0 ; sets the horizontal counter.
+    mov r14, 0 ; sets the vertical counter.
+
     mov r8, r9 ; moves the value of width to the counter.
+    dec r9     ; - 1 to width size, for later comparison with counters.
     add r8, 4  ; adds 4 to the width position, this is where the first actual pixel will be after padding the array with zeros.
+    
     mov r15, 0 ; sets 0 r15, which will store the final pixel convolution result.
 
 _convolveImage:
@@ -94,6 +99,7 @@ _convolveImage:
     sub r15, rax           ; The factor for this pixel is -1, so we just substract from the partial result the value of this pixel.
 
     pop r8                 ; restores the pixel value position to the original.
+    push r8                ; saves the original value.
     add r8, r8             ; multiplies current position by a factor of 2. 
     sub r8, 2              ; adjust position to be the lower adjacent.
 
@@ -105,13 +111,30 @@ _convolveImage:
     
     ; Convolution of pixed is complete at this point.
     mov [conv_result], r15d ; loads the result into memory.
-    ;lea esi, [conv_result]
-    ;mov ecx, 3
-    ;call _string2int
-    ;mov r15d, eax
-    ;mov [conv_result], r15d ; loads the result into memory.
 
-    jmp _endProgram        ; TESTING PURPOSES, WE NEED TO LOOP THIS TO GET ALL PIXELS.
+    call _writeFile        ; writes the result of the pixel convolution.
+
+    pop r8                 ; restores value position of pixel.
+    mov r15, 0             ; restarts the result of convolution.
+
+    ; Update the next pixel to convolve.
+    add r8, 1              ; + 1 to current pixel position, moving horizontally.
+    add r13, 1             ; + 1 to the horizontal count.             
+    cmp r13, r9            ; check if we have reached the end of the current row.
+    je _updatePosition     ; updates position if the row is complete.
+
+_keepConvolving:
+    jmp _convolveImage     ; keeps convolving the image.
+
+; Updates the position of the pixel row.
+_updatePosition:
+    inc r14                ; + 1 to the vertical count. Updates row.
+    mov r13, 0             ; resets the horizontal count.
+    add r8, 3              ; updates position of pixel.
+
+    cmp r14, r10           ; checks if we have reached the final row.
+    je _endProgram         ; exits the program.
+    jmp _keepConvolving    
 
 _getPixelValue:
     mov rax, SYS_OPEN      ; opens the file.
@@ -149,7 +172,7 @@ _getPixelValue:
 ; Exits the program.
 _endProgram:
 
-    call _writeFile 
+    ;call _writeFile 
 
     mov rax, SYS_EXIT
 	mov rdi, 0
