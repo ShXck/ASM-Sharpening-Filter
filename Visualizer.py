@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from PIL import Image
 import sys
+from scipy import signal
+from scipy import misc
 
 
 def img_to_bmp(path_to_img):
@@ -14,11 +16,16 @@ def to_bnw(input, output):
     bw = color_image.convert('L')
     bw.save(output)
 
+def bmparr_to_img(bmp):
+    img = Image.fromarray(bmp, 'RGB')
+    img.save('sharp.png')
+    img.show()
+
 def pad(flattened_bmp):
     return np.pad(flattened_bmp, (1, 1), 'constant', constant_values=(0, 0))
 
 
-def flatten_rgb(bitmap):
+def convert_to_1channel(bitmap):
     flattened_bmp = []
     for row in bitmap:
         new_row = []
@@ -50,6 +57,21 @@ def format_for_x86(flattened_rgb):
 
     return x86_lst
 
+def format_for_bmp(width, height, decoded_lst):
+    out = np.empty((height, width, 3), dtype=int)
+
+    dec_index = 0
+
+    try:
+        for row in out:
+            for pixel in row:
+                pixel[pixel == 0] = decoded_lst[dec_index]
+                dec_index += 1
+    except IndexError:
+        return out
+    return out
+    
+
 
 def write_x86_file(pixel_lst):
     file = open("unfiltered_img.txt", "w")
@@ -61,18 +83,41 @@ def show_img(bitmap):
     plt.imshow(bitmap)
     plt.show()
 
-
 def get_image_size():
     width = int(input("Inserte el ancho de imagen: "))
     height = int(input("Inserte el largo de imagen: "))
 
 def decode(file):
-    out_image_bin = open(file, 'r') 
-    lines = out_image_bin.readlines()
-    result = [] 
+    dec_lst = []
+    index = 0
 
-    for line in lines:
-        result.append(int.from_bytes(line.encode('utf-8'), byteorder=sys.byteorder))
+    with open(file, 'rb') as f:
+        contents = f.read()
+        for i in contents:
+            if index % 3 == 0:
+                dec_lst.append(i)
+            index += 1
+        return dec_lst
 
+def test_func(x86_lst, test_pnt):
+    ctr = 1
+    for i in x86_lst:
+        print(i)
+        if ctr == test_pnt:
+            return i
+        else: ctr += 1
 
-write_x86_file(format_for_x86(flatten_rgb(img_to_bmp('bnw.jpeg'))))
+#padded = pad(convert_to_1channel(img_to_bmp('bnw.jpeg')))
+#print(padded)
+bmp = img_to_bmp('bnw.jpeg')
+#dec = decode('new_file.txt')
+width = 259
+height = 194
+
+kernel = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
+conv = signal.convolve2d(convert_to_1channel(bmp), kernel, boundary='symm', mode='same')
+print(conv)
+fix = fix_rgb(conv)
+bmparr_to_img(fix)
+
+#x86_lst = format_for_x86(pad(convert_to_1channel(img_to_bmp('bnw.jpeg'))))
