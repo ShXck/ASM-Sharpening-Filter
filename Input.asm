@@ -136,6 +136,7 @@ _updatePosition:
     je _endProgram         ; exits the program.
     jmp _keepConvolving    
 
+
 _getPixelValue:
     mov rax, SYS_OPEN      ; opens the file.
     mov rdi, read_file_img ; target file.
