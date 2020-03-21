@@ -46,14 +46,21 @@ _start:
     mov r10d, eax     ; moves the integer value of height to r10d.
 
     mov r12, 0 ; starts the offset reading file.
-    mov r13, 0 ; sets the horizontal counter.
-    mov r14, 0 ; sets the vertical counter.
+    mov r14, 0 ; sets reference for offset.
+
+    mov rax, r9 ; sets the value of r13 equal to the width.
+    add rax, 2  ; adds 2 to the width, representing the additional zeros in the row, caused by zero padding.
+    mov r13, 3  ; multiplies the value of width by a factor of 3, which will be the next reference for the reading offset. 
+    mul r13     ; rax = (width + 2) * 3   
+    mov r13, rax ; stores the result in r13 for later use.
 
     mov r8, r9 ; moves the value of width to the counter.
     dec r9     ; - 1 to width size, for later comparison with counters.
     add r8, 4  ; adds 4 to the width position, this is where the first actual pixel will be after padding the array with zeros.
     
     mov r15, 0 ; sets 0 r15, which will store the final pixel convolution result.
+
+    push r9    ; stores the value of width in the stack.
 
 _convolveImage:
     ; Getting the current pixel and the adjacent values for convolution with the kernel.
@@ -63,8 +70,8 @@ _convolveImage:
     call _getPixelValue    ; gets the current pixel. Value is stored in pixel value.
     call _pixel2int        ; converts the pixel value to integer. Return value is stored in rbx.
     mov rax, rbx           ; loads the value of the integer conversion to rax.
-    mov r13, 5             ; loads the multiplication factor of the center of the kernel (5)
-    mul r13                ; multiply the pixel value by the factor. Result is stored in rax.
+    mov rbx, 5             ; loads the multiplication factor of the center of the kernel (5)
+    mul rbx                ; multiply the pixel value by the factor. Result is stored in rax.
     mov r15, rax           ; stores the partial result in r15.
 
     pop r8                 ; restores pixel position to original.
@@ -109,7 +116,7 @@ _convolveImage:
     mov rax, rbx           ; loads the value of the integer conversion to rax.
     sub r15, rax           ; The factor for this pixel is -1, so we just substract from the partial result the value of this pixel.
     
-    ; Convolution of pixed is complete at this point.
+    ; Convolution of pixel is complete at this point.
     mov [conv_result], r15d ; loads the result into memory.
 
     call _writeFile        ; writes the result of the pixel convolution.
@@ -119,25 +126,23 @@ _convolveImage:
 
     ; Update the next pixel to convolve.
     add r8, 1              ; + 1 to current pixel position, moving horizontally.
-    add r13, 1             ; + 1 to the horizontal count.             
-    cmp r13, r9            ; check if we have reached the end of the current row.
-    je _updatePosition     ; updates position if the row is complete.
-
-_keepConvolving:
-    jmp _convolveImage     ; keeps convolving the image.
+    dec r9                 ; - 1 to row width, because we already operated one pixel.            
+    
+    jz _updatePosition     ; updates position if the row is complete.
+    jmp _convolveImage     ; else keep operating row pixels.
 
 ; Updates the position of the pixel row.
 _updatePosition:
-    inc r14                ; + 1 to the vertical count. Updates row.
-    mov r13, 0             ; resets the horizontal count.
     add r8, 3              ; updates position of pixel.
-
-    cmp r14, r10           ; checks if we have reached the final row.
-    je _endProgram         ; exits the program.
-    jmp _keepConvolving    
-
+    pop r9                 ; restores the value of the width, to keep operating the next row.
+    push r9                ; saves the value again in the stack.        
+    add r14, r13           ; updates the reference offset point.
+    dec r10                ; - 1 to vertical position, since we already operated one row.
+    jz _endProgram         ; the whole image is ready, exits the program.
+    jmp _convolveImage     ; else keep convolving.
 
 _getPixelValue:
+    ; open file code here, in case of error.
     mov rax, SYS_OPEN      ; opens the file.
     mov rdi, read_file_img ; target file.
     mov rsi, O_RDONLY      ; read only mode.
@@ -147,9 +152,10 @@ _getPixelValue:
     push rax
     mov rdi, rax 
 
+_getPixel:
     mov rax, SYS_LSEEK ; updates the file pointer.
     mov rsi, r12 ; start of reading offset.
-    mov rdx, 0 ; offset reference point, 0 meaning the start of the file. 
+    mov rdx, 0 ; offset reference point, 0 meaning the beginning of the file. 
     syscall
 
     mov rax, SYS_READ      ; reads file from where the pointer is.
@@ -157,17 +163,20 @@ _getPixelValue:
     mov rdx, 3             ; bytes stored.
     syscall
 
-    mov rax, SYS_CLOSE ; closes the file.
-    pop rdi
-    syscall
-
+    ; close file code here, in case of error.
+    
     add r12, 3 ; updates reading offset. 3 bytes because each number is formatted for a len of 3.
 
     ;call _writeFile
 
     dec r8  ; decrements the loop counter.
-    jnz _getPixelValue
+    jnz _getPixel
     mov r12, 0 ; resets the offset
+
+    mov rax, SYS_CLOSE ; closes the file.
+    pop rdi
+    syscall
+
     ret
 
 ; Exits the program.
@@ -175,14 +184,14 @@ _endProgram:
 
     ;call _writeFile 
 
-    mov rax, SYS_EXIT
+    mov rax, SYS_EXIT ; exits the program.
 	mov rdi, 0
-	syscall			; exits the program.
+	syscall			
 
 ; Writes value of pixel_value to a file.
 _writeFile:
 
-    mov [conv_result], r15
+    ;mov [conv_result], r15
 
 	mov rax, SYS_OPEN
     mov rdi, new_file
@@ -193,7 +202,7 @@ _writeFile:
     push rax
     mov rdi, rax
     mov rax, SYS_WRITE
-    mov rsi, conv_result ; TODO: Change for conv_result. 
+    mov rsi, conv_result 
     mov rdx, 3
     syscall
 
@@ -218,8 +227,9 @@ _string2int:
   inc esi
   sub al, '0'    ; convert from ASCII to number
   imul ebx, 10
-  add ebx,eax   ; ebx = ebx*10 + eax
-  loop .next_digit  ; while (--ecx)
+  add ebx, eax   ; ebx = ebx*10 + eax
+  dec ecx
+  jnz .next_digit  ; while (--ecx)
   mov eax, ebx
   ret
 
