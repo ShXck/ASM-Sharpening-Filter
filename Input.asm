@@ -3,10 +3,6 @@
 
 section .data
 
-	kernel_array DW 0, -1, 0   ; defines the 3x3 filter kernel.
-			     DW -1, 5, -1
-				 DW 0, -1, 0
-
 	new_file db "new_file.txt", 0 ; file terminated in 0
 	read_file_img db "unfiltered_img.txt", 0 	; file with no filtered image.
 	sharp_file db "sharpened.txt", 0   			; file with sharpened image.
@@ -48,16 +44,10 @@ _start:
     mov r12, 0 ; starts the offset reading file.
     mov r14, 0 ; sets reference for offset.
 
-    mov rax, r9 ; sets the value of r13 equal to the width.
-    add rax, 2  ; adds 2 to the width, representing the additional zeros in the row, caused by zero padding.
-    mov r13, 3  ; multiplies the value of width by a factor of 3, which will be the next reference for the reading offset. 
-    mul r13     ; rax = (width + 2) * 3   
-    mov r13, rax ; stores the result in r13 for later use.
-
     mov r8, r9 ; moves the value of width to the counter.
     dec r9     ; - 1 to width size, for later comparison with counters.
     add r8, 4  ; adds 4 to the width position, this is where the first actual pixel will be after padding the array with zeros.
-    
+
     mov r15, 0 ; sets 0 r15, which will store the final pixel convolution result.
 
     push r9    ; stores the value of width in the stack.
@@ -124,7 +114,7 @@ _convolveImage:
     pop r8                 ; restores value position of pixel.
     mov r15, 0             ; restarts the result of convolution.
 
-    ; Update the next pixel to convolve.
+    ; Update the next pixel to be convolved.
     add r8, 1              ; + 1 to current pixel position, moving horizontally.
     dec r9                 ; - 1 to row width, because we already operated one pixel.            
     
@@ -133,10 +123,9 @@ _convolveImage:
 
 ; Updates the position of the pixel row.
 _updatePosition:
-    add r8, 3              ; updates position of pixel.
+    add r8, 3              ; updates the position to the next value.
     pop r9                 ; restores the value of the width, to keep operating the next row.
     push r9                ; saves the value again in the stack.        
-    add r14, r13           ; updates the reference offset point.
     dec r10                ; - 1 to vertical position, since we already operated one row.
     jz _endProgram         ; the whole image is ready, exits the program.
     jmp _convolveImage     ; else keep convolving.
@@ -155,7 +144,7 @@ _getPixelValue:
 _getPixel:
     mov rax, SYS_LSEEK ; updates the file pointer.
     mov rsi, r12 ; start of reading offset.
-    mov rdx, 0 ; offset reference point, 0 meaning the beginning of the file. 
+    mov rdx, 0 ;r14 ; offset reference point, 0 meaning the beginning of the file. 
     syscall
 
     mov rax, SYS_READ      ; reads file from where the pointer is.
@@ -203,7 +192,7 @@ _writeFile:
     mov rdi, rax
     mov rax, SYS_WRITE
     mov rsi, conv_result 
-    mov rdx, 3
+    mov rdx, 4
     syscall
 
     mov rax, SYS_CLOSE
