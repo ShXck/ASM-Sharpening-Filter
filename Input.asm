@@ -52,11 +52,15 @@ _start:
 
     mov r8, rax    ; moves the result back to r8, which is our position register.
     mov r14, rax   ; moves the result to keep it for further use in the algorithm.
+    mov r12, r8    ; moves the starting value for it is neccesary for the calculation of the position of upper pixels.
+    mov r11, r8    ; moves the starting value, necesarry for the calculation of lower addjacent along the row.
     mov r13, 3     ; register for keeping the offset of the lower adjacent pixel. Starts at 3.
 
     mov r15, 0 ; sets 0 r15, which will store the final pixel convolution result.
 
     push r9    ; stores the value of width in the stack.
+
+    ;mov r8, 1569
 
 _convolveImage:
     ; Getting the current pixel and the adjacent values for convolution with the kernel.
@@ -103,15 +107,15 @@ _convolveImage:
 
     pop r8                 ; restores the pixel value position to the original.
     push r8                ; saves the original value.
-    add r8, r8             ; multiplies current position by a factor of 2. 
-    sub r8, r13              ; adjust position to be the lower adjacent.   <-| problematic line.
+    add r8, r12            
+    sub r8, r13            ; adjust position to be the lower adjacent.   
 
     ; Operating lower adjacent.
     call _getPixelValue    ; gets the left adjacent pixel.      
     call _pixel2int        ; converts the pixel value to integer.
     mov rax, rbx           ; loads the value of the integer conversion to rax.
     sub r15, rax           ; The factor for this pixel is -1, so we just substract from the partial result the value of this pixel.
-    
+
     ; Convolution of pixel is complete at this point.
     mov rax, r15
     call itoa
@@ -124,17 +128,21 @@ _convolveImage:
     pop r8                 ; restores value position of pixel.
     mov r15, 0             ; restarts the result of convolution.
 
+    dec r9                 ; - 1 to row width, because we already operated one pixel. 
+    jz _updatePosition     ; updates position if the row is complete.
+
     ; Update the next pixel to be convolved.
     add r8, 3              ; + 1 to current pixel position, moving horizontally.
     add r13, 3             ; updates the offset for lower adjacents
+    add r12, 3             ; updates the lower position offset.
 
-    dec r9                 ; - 1 to row width, because we already operated one pixel. 
-    jz _updatePosition     ; updates position if the row is complete.
     jmp _convolveImage     ; else keep operating row pixels.
 
 ; Updates the position of the pixel row.
 _updatePosition:
-    add r8, 6               ; updates the position to the next value.
+    add r8, 9              ; updates the position to the next value.
+    mov r13, 3             ; restores offset for lower adjacent. 
+    mov r12, r11           ; restores the position offset for lower adjacent
     pop r9                 ; restores the value of the width, to keep operating the next row.
     push r9                ; saves the value again in the stack.        
     dec r10                ; - 1 to vertical position, since we already operated one row.
@@ -142,6 +150,8 @@ _updatePosition:
     jmp _convolveImage     ; else keep convolving.
 
 _getPixelValue:
+
+    push r11
 
     mov rax, SYS_OPEN      ; opens the file.
     mov rdi, read_file_img ; target file.
@@ -162,11 +172,11 @@ _getPixelValue:
     mov rdx, 3             ; bytes stored.
     syscall
 
-    ;call _writeFile
-
     mov rax, SYS_CLOSE ; closes the file.
     pop rdi
     syscall
+
+    pop r11
 
     ret
 
@@ -178,6 +188,8 @@ _endProgram:
 
 ; Writes value of pixel_value to a file.
 _writeFile:
+
+    push r11
 
 	mov rax, SYS_OPEN
     mov rdi, new_file
@@ -195,6 +207,8 @@ _writeFile:
     mov rax, SYS_CLOSE
     pop rdi
     syscall
+
+    pop r11
 	ret
 
 _addNewLine:
