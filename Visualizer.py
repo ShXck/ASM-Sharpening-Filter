@@ -5,6 +5,7 @@ from PIL import Image
 import sys
 from scipy import signal
 import os
+import random
 
 
 def img_to_bmp(path_to_img):
@@ -65,15 +66,19 @@ def show_filtered_img(width, height, dec):
     im.putdata(dec)
     im.show()
 
-def build_new_image(out_file, height):
-    out = open(out_file, "r")
-    contents = out.read()
-    values = contents.split('\n')
-    fixed_vals = []
-    for i in values:
-        fixed_vals.append(i.replace('\x00', ""))
-    return list(map(int, fixed_vals[:-1]))
+def build_new_image(out_file):
+    with open(out_file, encoding="utf-8", errors='replace') as read_data:
+        contents = read_data.read()[2:]
+        grouped = [contents[i:i+3] for i in range(0, len(contents), 3)]
+        fixed = [number for number in grouped if number != '\n\x00\x00']
+        deb = [i.replace('\x00', '') for i in fixed]
+        int_arr = [int(i) for i in deb]
+        return int_arr
+        
+def gen_neg():
+    return random.randrange(-500, -1)
 
+        
 def run_filters():
     width = int(input("Inserte el ancho de imagen: "))
     height = int(input("Inserte el largo de imagen: "))
@@ -96,32 +101,27 @@ def test_func(x86_lst, test_pnt):
 #run_filters()
 
 #img = img_to_bmp('bnw.jpeg')
-
 #adj = convert_to_1channel(img)
+
 
 width = 259
 height = 194
 
-arr = build_new_image("new_file.txt", height)
-
-show_filtered_img(width, height, arr)
+arr = build_new_image("new_file.txt")
+show_filtered_img(1024, 768, arr)
 
 #exp = [[1,2,3], [4,5,6], [7,8,9]]
 kernel = [[0,-1,0], [-1,5,-1], [0,-1,0]]
 
+
 #out = signal.convolve2d(adj, kernel, boundary='fill', mode='same')
+#print(out.flatten())
 
 #print("REAL: ", out.flatten()[:50], len(out.flatten()))
-
-#over = signal.convolve2d(out, kernel, boundary='fill', mode='same')
-
-#show_filtered_img(width, height, out.flatten())
-
 
 #new_bmp = format_for_bmp(width, height, dec)
 #print(len(new_bmp[0]))
 #bmparr_to_img(new_bmp)
 #bmparr_to_img(fix_rgb(out))
 
-#to_bnw('dog.jpg', 'dogbnw.jpg')
-#write_x86_file(format_for_x86(pad(convert_to_1channel(img_to_bmp('bnw.jpeg')))))
+#write_x86_file(format_for_x86(pad(convert_to_1channel(img_to_bmp('landbnw.jpg')))))
