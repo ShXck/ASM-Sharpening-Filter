@@ -16,17 +16,11 @@ def to_bnw(input, output):
     bw = color_image.convert('L')
     bw.save(output)
 
-def bmparr_to_img(bmp):
-    img = Image.fromarray(bmp, 'RGB')
-    img.save('sharp.png')
-    img.show()
-
 def pad(flattened_bmp):
     return np.pad(flattened_bmp, (1, 1), 'constant', constant_values=(0, 0))
 
 
 def convert_to_1channel(bitmap):
-
     if len(bitmap.shape) > 2:
         flattened_bmp = []
         for row in bitmap:
@@ -66,42 +60,19 @@ def write_x86_file(pixel_lst):
     file.write(''.join(map(str, pixel_lst)))
     file.close()
 
-def show_img(bitmap):
-    plt.imshow(bitmap)
-    plt.show()
-
 def show_filtered_img(width, height, dec):
     im = Image.new('L', (width, height))
     im.putdata(dec)
     im.show()
 
-def decode(file):
-    dec_lst = []
-
-    with open(file, 'rb') as f:
-        contents = f.read()
-        tmp_lst = []
-        for i in contents:
-            tmp_lst.append(hex(i))
-            if len(tmp_lst) == 4:
-                new_number = append_hex(int(tmp_lst[1], 16), int(tmp_lst[0], 16))
-                if(new_number > 990):
-                    dec_lst.append(255)
-                else:
-                    dec_lst.append(new_number)   #" ".join([str(i) for i in tmp_lst[::-1][2:]])
-                tmp_lst.clear()
-        return np.asarray(dec_lst)
-
-def append_hex(hex_a, hex_b):
-    sizeof_b = 0
-    while((hex_b >> sizeof_b) > 0):
-        sizeof_b += 1
-    sizeof_b += sizeof_b % 4
-    return (hex_a << sizeof_b) | hex_b
-
-def str_to_hex(str_hex):
-    return int(str_hex, 16)
-
+def build_new_image(out_file, height):
+    out = open(out_file, "r")
+    contents = out.read()
+    values = contents.split('\n')
+    fixed_vals = []
+    for i in values:
+        fixed_vals.append(i.replace('\x00', ""))
+    return list(map(int, fixed_vals[:-1]))
 
 def run_filters():
     width = int(input("Inserte el ancho de imagen: "))
@@ -111,28 +82,40 @@ def run_filters():
     os.system("ld input.o -o input")
     os.system("./input")
 
+def test_func(x86_lst, test_pnt):
+    size = 0
+    ctr = 1
+    for i in x86_lst:
+        size += len(i)
+        if ctr == test_pnt:
+            return i, (size - 3)
+        else: ctr += 1
+
+#lst = format_for_x86(pad(convert_to_1channel(img_to_bmp('bnw.jpeg'))))
+#print(test_func(lst, 524))
 #run_filters()
 
-img = img_to_bmp('bnw.jpeg')
+#img = img_to_bmp('bnw.jpeg')
 
-adj = convert_to_1channel(img)
-
-dec = decode('new_file.txt')
-
-#adjusted = convert_to_1channel(img)
+#adj = convert_to_1channel(img)
 
 width = 259
 height = 194
 
+arr = build_new_image("new_file.txt", height)
+
+show_filtered_img(width, height, arr)
+
 #exp = [[1,2,3], [4,5,6], [7,8,9]]
 kernel = [[0,-1,0], [-1,5,-1], [0,-1,0]]
 
-out = signal.convolve2d(adj, kernel, boundary='fill', mode='same')
+#out = signal.convolve2d(adj, kernel, boundary='fill', mode='same')
 
-print("REAL: ", out.flatten()[:100])
-print("OWN: ", dec[:100])
+#print("REAL: ", out.flatten()[:50], len(out.flatten()))
 
-show_filtered_img(width, height, dec)
+#over = signal.convolve2d(out, kernel, boundary='fill', mode='same')
+
+#show_filtered_img(width, height, out.flatten())
 
 
 #new_bmp = format_for_bmp(width, height, dec)
@@ -140,5 +123,5 @@ show_filtered_img(width, height, dec)
 #bmparr_to_img(new_bmp)
 #bmparr_to_img(fix_rgb(out))
 
-#to_bnw('jbuilding.jpeg', 'bnw1.jpeg')
+#to_bnw('dog.jpg', 'dogbnw.jpg')
 #write_x86_file(format_for_x86(pad(convert_to_1channel(img_to_bmp('bnw.jpeg')))))

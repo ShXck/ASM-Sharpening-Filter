@@ -22,15 +22,17 @@ _start:
 	get_height		; gets width by user input.
     
     ; Input data set up.
-    lea rbx, [width] ; loads width into rbx.
-    call _getLenChar ; gets the len of width.
-    mov r9, rcx      ; moves the len of width to r9.
+    ;lea rbx, [width] ; loads width into rbx.
+    ;call _getLenChar ; gets the len of width.
+    ;mov r9, rcx      ; moves the len of width to r9.
 
-    lea esi, [width] ; loads width into esi.
-    mov ecx, r9d     ; moves the len of width into ecx.
-    call _string2int ; converts the value of width to an actual integer.
-    mov r9d, eax     ; moves the integer value of width to r9d.
-
+    ;lea esi, [width] ; loads width into esi.
+    ;mov ecx, r9d     ; moves the len of width into ecx.
+    ;call _string2int ; converts the value of width to an actual integer.
+    ;mov r9d, eax     ; moves the integer value of width to r9d.
+    mov rdx, width
+    call atoi
+    mov r9, rax
 
     lea rbx, [height] ; loads height into rbx.
     call _getLenChar  ; gets the len of height.
@@ -42,11 +44,17 @@ _start:
     mov r10d, eax     ; moves the integer value of height to r10d.
 
     mov r12, 0 ; starts the offset reading file.
-    mov r14, 0 ; sets reference for offset.
 
     mov r8, r9 ; moves the value of width to the counter.
-    dec r9     ; - 1 to width size, for later comparison with counters.
-    add r8, 4  ; adds 4 to the width position, this is where the first actual pixel will be after padding the array with zeros.
+    dec r9     ; - 1 to width size, for later use in the convolution algorithm.
+
+    add r8, 3      ; adds 3 to the width position to consider the zero padding.
+    mov r15, 3     ; loads multiplication factor.
+    mov rax, r8    ; loads number to multiply.
+    mul r15        ; (width + 3) * 3 this is where the first actual pixel will be. 
+
+    mov r8, rax    ; moves the result back to r8, which is our position register.
+    mov r14, rax   ; moves the result to keep it for further use in the algorithm.
 
     mov r15, 0 ; sets 0 r15, which will store the final pixel convolution result.
 
@@ -55,7 +63,7 @@ _start:
 _convolveImage:
     ; Getting the current pixel and the adjacent values for convolution with the kernel.
     push r8                ; push the value of the current pixel position to the stack to preserve it for future use.
-
+    
     ; Operating middle pixel.
     call _getPixelValue    ; gets the current pixel. Value is stored in pixel value.
     call _pixel2int        ; converts the pixel value to integer. Return value is stored in rbx.
@@ -66,7 +74,7 @@ _convolveImage:
 
     pop r8                 ; restores pixel position to original.
     push r8                ; saves the original value again.
-    sub r8, 1              ; - 1 to current position, will give us the position of the left adjacent pixel.
+    sub r8, 3              ; - 1 to current position, will give us the position of the left adjacent pixel.
 
     ; Operating left adjacent
     call _getPixelValue    ; gets the left adjacent pixel.
@@ -76,7 +84,7 @@ _convolveImage:
 
     pop r8                 ; restores the original value.
     push r8                ; saves the original value.
-    add r8, 1              ; + 1 to the current position, will give us the position to the right adjacent pixel.
+    add r8, 3              ; + 1 to the current position, will give us the position to the right adjacent pixel.
 
     ; Operating right adjacent
     call _getPixelValue    ; gets the left adjacent pixel.
@@ -86,8 +94,8 @@ _convolveImage:
 
     pop r8                 ; restores the original value.
     push r8                ; saves the original value.
-    sub r8, r9             ; set the position to the upper adjacent pixel. pixel = position - size_of_padded_array.             
-    sub r8, 3 
+    sub r8, r14            ; set the position to the upper adjacent pixel. pixel = position - initial_pos.             
+    add r8, 3              ; moves the position to the right to get the right position.
 
     ; Operating upper adjacent.
     call _getPixelValue    ; gets the left adjacent pixel.      
@@ -95,10 +103,11 @@ _convolveImage:
     mov rax, rbx           ; loads the value of the integer conversion to rax.
     sub r15, rax           ; The factor for this pixel is -1, so we just substract from the partial result the value of this pixel.
 
+
     pop r8                 ; restores the pixel value position to the original.
     push r8                ; saves the original value.
     add r8, r8             ; multiplies current position by a factor of 2. 
-    sub r8, 2              ; adjust position to be the lower adjacent.
+    sub r8, 3              ; adjust position to be the lower adjacent.
 
     ; Operating lower adjacent.
     call _getPixelValue    ; gets the left adjacent pixel.      
@@ -107,23 +116,29 @@ _convolveImage:
     sub r15, rax           ; The factor for this pixel is -1, so we just substract from the partial result the value of this pixel.
     
     ; Convolution of pixel is complete at this point.
+    mov rax, r15
+    call itoa
+    mov r15, rdi
     mov [conv_result], r15d ; loads the result into memory.
 
     call _writeFile        ; writes the result of the pixel convolution.
+    call _addNewLine       ; adds a line jump to make the output readable.
 
     pop r8                 ; restores value position of pixel.
     mov r15, 0             ; restarts the result of convolution.
 
     ; Update the next pixel to be convolved.
-    add r8, 1              ; + 1 to current pixel position, moving horizontally.
+    add r8, 3              ; + 1 to current pixel position, moving horizontally.
     dec r9                 ; - 1 to row width, because we already operated one pixel.            
     
+    ;jmp _endProgram ; TESTING PURPOSES
+
     jz _updatePosition     ; updates position if the row is complete.
     jmp _convolveImage     ; else keep operating row pixels.
 
 ; Updates the position of the pixel row.
 _updatePosition:
-    add r8, 3              ; updates the position to the next value.
+    add r8, 9              ; updates the position to the next value.
     pop r9                 ; restores the value of the width, to keep operating the next row.
     push r9                ; saves the value again in the stack.        
     dec r10                ; - 1 to vertical position, since we already operated one row.
@@ -131,7 +146,7 @@ _updatePosition:
     jmp _convolveImage     ; else keep convolving.
 
 _getPixelValue:
-    ; open file code here, in case of error.
+
     mov rax, SYS_OPEN      ; opens the file.
     mov rdi, read_file_img ; target file.
     mov rsi, O_RDONLY      ; read only mode.
@@ -141,10 +156,9 @@ _getPixelValue:
     push rax
     mov rdi, rax 
 
-_getPixel:
     mov rax, SYS_LSEEK ; updates the file pointer.
-    mov rsi, r12 ; start of reading offset.
-    mov rdx, 0 ;r14 ; offset reference point, 0 meaning the beginning of the file. 
+    mov rsi, r8 ; start of reading offset.
+    mov rdx, 0  ; offset reference point, 0 meaning the beginning of the file. 
     syscall
 
     mov rax, SYS_READ      ; reads file from where the pointer is.
@@ -152,15 +166,7 @@ _getPixel:
     mov rdx, 3             ; bytes stored.
     syscall
 
-    ; close file code here, in case of error.
-    
-    add r12, 3 ; updates reading offset. 3 bytes because each number is formatted for a len of 3.
-
     ;call _writeFile
-
-    dec r8  ; decrements the loop counter.
-    jnz _getPixel
-    mov r12, 0 ; resets the offset
 
     mov rax, SYS_CLOSE ; closes the file.
     pop rdi
@@ -170,9 +176,6 @@ _getPixel:
 
 ; Exits the program.
 _endProgram:
-
-    ;call _writeFile 
-
     mov rax, SYS_EXIT ; exits the program.
 	mov rdi, 0
 	syscall			
@@ -191,14 +194,18 @@ _writeFile:
     push rax
     mov rdi, rax
     mov rax, SYS_WRITE
-    mov rsi, conv_result 
-    mov rdx, 4
+    mov rsi, conv_result
+    mov rdx, 3
     syscall
 
     mov rax, SYS_CLOSE
     pop rdi
     syscall
 	ret
+
+_addNewLine:
+    mov dword [conv_result], 10  ; loads the ascii for a new line.
+    call _writeFile             ; writes the line jump.
 
 _pixel2int:
     lea esi, [pixel_value] ; loads pixel value into esi.
@@ -221,6 +228,45 @@ _string2int:
   jnz .next_digit  ; while (--ecx)
   mov eax, ebx
   ret
+
+; ascii to integer, input ascii should be in rdx and return value is stored at rax.
+atoi:
+	xor rax, rax ; 
+.top:
+	movzx rcx, byte [rdx] 
+	inc rdx 
+	cmp rcx, '0'  
+	jb .done
+	cmp rcx, '9'
+	ja .done
+	sub rcx, '0'  
+	imul rax, 10  
+	add rax, rcx  
+	jmp .top  
+	.done:
+ret
+
+itoa:
+	mov ebx, 0xCCCCCCCD             
+	xor rdi, rdi
+.loop:
+	mov ecx, eax                    ; save original number
+
+	mul ebx                         ; divide by 10 using agner fog's 'magic number'
+	shr edx, 3                      ;
+
+	mov eax, edx                    ; store it back into eax
+
+	lea edx, [edx*4 + edx]          ; multiply by 10
+	lea edx, [edx*2 - '0']          ; and ascii it
+	sub ecx, edx                    ; subtract from original number to get remainder
+
+	shl rdi, 8                      ; shift in to least significant byte
+	or rdi, rcx                     ;
+
+	test eax, eax
+	jnz .loop   
+	ret
 
 ; Gets the len of a string and returns it to ecx. ; TODO: fix for len > 3
 _getLenChar:
