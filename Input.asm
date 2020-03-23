@@ -34,16 +34,19 @@ _start:
     call atoi
     mov r9, rax
 
-    lea rbx, [height] ; loads height into rbx.
-    call _getLenChar  ; gets the len of height.
-    mov r10, rcx      ; moves the len of height to r10.
+    ;lea rbx, [height] ; loads height into rbx.
+    ;call _getLenChar  ; gets the len of height.
+    ;mov r10, rcx      ; moves the len of height to r10.
 
-    lea esi, [height] ; loads width into esi.
-    mov ecx, r10d     ; moves the len of height into ecx.
-    call _string2int ; converts the value of height to an actual integer.
-    mov r10d, eax     ; moves the integer value of height to r10d.
+    ;lea esi, [height] ; loads width into esi.
+    ;mov ecx, r10d     ; moves the len of height into ecx.
+    ;call _string2int ; converts the value of height to an actual integer.
+    ;mov r10d, eax     ; moves the integer value of height to r10d.
+    mov rdx, height
+    call atoi
+    mov r10, rax
 
-    mov r8, r9 ; moves the value of width to the counter.
+    mov r8, r9     ; moves the value of width to the counter.
 
     add r8, 3      ; adds 3 to the width position to consider the zero padding.
     mov r15, 3     ; loads multiplication factor.
@@ -59,8 +62,6 @@ _start:
     mov r15, 0 ; sets 0 r15, which will store the final pixel convolution result.
 
     push r9    ; stores the value of width in the stack.
-
-    ;mov r8, 1569
 
 _convolveImage:
     ; Getting the current pixel and the adjacent values for convolution with the kernel.
@@ -120,7 +121,7 @@ _convolveImage:
     mov rax, r15
     call itoa
     mov r15, rdi
-    mov [conv_result], r15d ; loads the result into memory.
+    mov [conv_result], rdi ; loads the result into memory.
 
     call _writeFile        ; writes the result of the pixel convolution.
     call _addNewLine       ; adds a line jump to make the output readable.
@@ -192,7 +193,7 @@ _writeFile:
     push r11
 
 	mov rax, SYS_OPEN
-    mov rdi, new_file
+    mov rdi, sharp_file
     mov rsi, O_APPEND + O_WRONLY
     mov rdx, 0666o
     syscall

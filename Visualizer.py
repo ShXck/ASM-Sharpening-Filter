@@ -6,6 +6,7 @@ import sys
 from scipy import signal
 import os
 import random
+from pathlib import Path
 
 
 def img_to_bmp(path_to_img):
@@ -67,12 +68,19 @@ def show_filtered_img(width, height, dec):
     im.show()
 
 def build_new_image(out_file):
+    val_for_neg = 429
     with open(out_file, encoding="utf-8", errors='replace') as read_data:
-        contents = read_data.read()[2:]
+        contents = read_data.read()
         grouped = [contents[i:i+3] for i in range(0, len(contents), 3)]
         fixed = [number for number in grouped if number != '\n\x00\x00']
         deb = [i.replace('\x00', '') for i in fixed]
+        deb = [i.replace('\n', '') for i in deb]
         int_arr = [int(i) for i in deb]
+
+        for i in range(0, len(int_arr)):
+            if int_arr[i] == val_for_neg:
+                int_arr[i] = gen_neg()
+
         return int_arr
         
 def gen_neg():
@@ -80,48 +88,25 @@ def gen_neg():
 
         
 def run_filters():
+    img_to_proc = input("Escriba el nombre y formato de la imagen: ")
     width = int(input("Inserte el ancho de imagen: "))
     height = int(input("Inserte el largo de imagen: "))
+
+    Path('sharpened.txt').touch()
+    Path('oversharpened.txt').touch()
+    Path('unfiltered_img.txt').touch()
+
+    write_x86_file(format_for_x86(pad(convert_to_1channel(img_to_bmp(img_to_proc)))))
+
+    print("\n -------- Corriendo script de ensamblador -------- \n")
 
     os.system("nasm -f elf64 Input.asm -o input.o")
     os.system("ld input.o -o input")
     os.system("./input")
 
-def test_func(x86_lst, test_pnt):
-    size = 0
-    ctr = 1
-    for i in x86_lst:
-        size += len(i)
-        if ctr == test_pnt:
-            return i, (size - 3)
-        else: ctr += 1
+    print("\n -------- Procesando imágen --------  \n")
 
-#lst = format_for_x86(pad(convert_to_1channel(img_to_bmp('bnw.jpeg'))))
-#print(test_func(lst, 524))
-#run_filters()
+    arr = build_new_image("sharpened.txt")
+    show_filtered_img(width, height, arr)
 
-#img = img_to_bmp('bnw.jpeg')
-#adj = convert_to_1channel(img)
-
-
-width = 259
-height = 194
-
-arr = build_new_image("new_file.txt")
-show_filtered_img(1024, 768, arr)
-
-#exp = [[1,2,3], [4,5,6], [7,8,9]]
-kernel = [[0,-1,0], [-1,5,-1], [0,-1,0]]
-
-
-#out = signal.convolve2d(adj, kernel, boundary='fill', mode='same')
-#print(out.flatten())
-
-#print("REAL: ", out.flatten()[:50], len(out.flatten()))
-
-#new_bmp = format_for_bmp(width, height, dec)
-#print(len(new_bmp[0]))
-#bmparr_to_img(new_bmp)
-#bmparr_to_img(fix_rgb(out))
-
-#write_x86_file(format_for_x86(pad(convert_to_1channel(img_to_bmp('landbnw.jpg')))))
+run_filters()
