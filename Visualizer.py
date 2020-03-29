@@ -36,18 +36,6 @@ def convert_to_1channel(bitmap):
     else:
         return bitmap
 
-
-def fix_rgb(flattened_bmp):
-    fixed_bmp = []
-    for row in flattened_bmp:
-        pixel_map = []
-        for pixel in row:
-            pixel_lst = [pixel, pixel, pixel]
-            pixel_map.append(pixel_lst)
-        fixed_bmp.append(pixel_map)
-    nparr = np.asarray(fixed_bmp)
-    return nparr
-
 def format_for_x86(flattened_rgb):
     x86_lst = []
 
@@ -62,11 +50,26 @@ def write_x86_file(pixel_lst):
     file.write(''.join(map(str, pixel_lst)))
     file.close()
 
-def show_filtered_img(width, height, dec):
+def save_new_img(width, height, dec, out):
     im = Image.new('L', (width, height))
     im.putdata(dec)
-    im.show()
+    im.save(out)
 
+def show_output_images(img_names):
+
+    bnw_img = mpimg.imread(img_names[0])
+    sharp_img = mpimg.imread(img_names[1])
+    oversharp_img = mpimg.imread(img_names[2])
+
+    plot_image = np.concatenate((bnw_img, sharp_img, oversharp_img), axis=1)
+
+    plt.set_cmap('gray')
+
+    plt.imshow(plot_image)
+
+    plt.show()
+
+    
 def build_new_image(out_file):
     val_for_neg = 429
     with open(out_file, encoding="utf-8", errors='replace') as read_data:
@@ -86,27 +89,47 @@ def build_new_image(out_file):
 def gen_neg():
     return random.randrange(-500, -1)
 
-        
+def set_out_names(og_name):
+    og_name_splt = og_name.split('.')
+    out_names = og_name_splt[0] + "bnw." + og_name_splt[1]
+    sharp_name = og_name_splt[0] + "sharpen." + og_name_splt[1]
+    oversharp_name = og_name_splt[0] + "oversharpen." + og_name_splt[1]
+    return out_names, sharp_name, oversharp_name  
+
 def run_filters():
     img_to_proc = input("Escriba el nombre y formato de la imagen: ")
     width = int(input("Inserte el ancho de imagen: "))
     height = int(input("Inserte el largo de imagen: "))
 
+    os.system("rm -f sharpened.txt oversharpened.txt")
+
+    out_names = set_out_names(img_to_proc)
+
+    to_bnw(img_to_proc, out_names[0])
+
     Path('sharpened.txt').touch()
     Path('oversharpened.txt').touch()
     Path('unfiltered_img.txt').touch()
 
-    write_x86_file(format_for_x86(pad(convert_to_1channel(img_to_bmp(img_to_proc)))))
+    write_x86_file(format_for_x86(pad(convert_to_1channel(img_to_bmp(out_names[0])))))
 
     print("\n -------- Corriendo script de ensamblador -------- \n")
 
-    os.system("nasm -f elf64 Input.asm -o input.o")
-    os.system("ld input.o -o input")
+    os.system("nasm -f elf64 sharp.asm -o sharp.o")
+    os.system("ld sharp.o -o sharp")
+
+    os.system("nasm -f elf64 oversharpen.asm -o over.o")
+    os.system("ld over.o -o over")
+
     os.system("./input")
+    os.system("./over")
 
-    print("\n -------- Procesando imágen --------  \n")
+    sharp = build_new_image("sharpened.txt")
+    oversharp_img = build_new_image("oversharpened.txt")
 
-    arr = build_new_image("sharpened.txt")
-    show_filtered_img(width, height, arr)
+    save_new_img(width, height, sharp, out_names[1])
+    save_new_img(width, height, oversharp_img, out_names[2])
+
+    show_output_images(out_names)
 
 run_filters()
