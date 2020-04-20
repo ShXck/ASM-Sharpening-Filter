@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from PIL import Image
 import sys
-from scipy import signal
 import os
 import random
 from pathlib import Path
@@ -88,13 +87,26 @@ def build_new_image(out_file):
         
 def gen_neg():
     return random.randrange(-500, -1)
+    
 
 def set_out_names(og_name):
     og_name_splt = og_name.split('.')
+    
+    if og_name_splt[1] != "jpg" or og_name_splt != "jpeg":
+        og_name_splt = convert_to_jpg(og_name_splt[0], og_name_splt[1]).split('.')
+
     out_names = og_name_splt[0] + "bnw." + og_name_splt[1]
     sharp_name = og_name_splt[0] + "sharpen." + og_name_splt[1]
     oversharp_name = og_name_splt[0] + "oversharpen." + og_name_splt[1]
     return out_names, sharp_name, oversharp_name  
+
+def convert_to_jpg(name, format):  
+    curr_name = name + "." + format
+    new_name = name + "." + "jpg"
+    sys_cmd = "convert " + curr_name + " " + new_name
+    os.system(sys_cmd)
+    return new_name
+
 
 def run_filters():
     img_to_proc = input("Escriba el nombre y formato de la imagen: ")
@@ -121,7 +133,7 @@ def run_filters():
     os.system("nasm -f elf64 oversharpen.asm -o over.o")
     os.system("ld over.o -o over")
 
-    os.system("./input")
+    os.system("./sharp")
     os.system("./over")
 
     sharp = build_new_image("sharpened.txt")

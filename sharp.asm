@@ -1,4 +1,5 @@
 %include "InputMacro.inc"
+%include "Constants.inc"
 
 section .data
 
