@@ -19,27 +19,11 @@ _start:
 	request_height	; prompts request to enter image height.
 	get_height		; gets width by user input.
     
-    ; Input data set up.
-    ;lea rbx, [width] ; loads width into rbx.
-    ;call _getLenChar ; gets the len of width.
-    ;mov r9, rcx      ; moves the len of width to r9.
-
-    ;lea esi, [width] ; loads width into esi.
-    ;mov ecx, r9d     ; moves the len of width into ecx.
-    ;call _string2int ; converts the value of width to an actual integer.
-    ;mov r9d, eax     ; moves the integer value of width to r9d.
+    ; Sets the image dimensions.
     mov rdx, width
     call atoi
     mov r9, rax
 
-    ;lea rbx, [height] ; loads height into rbx.
-    ;call _getLenChar  ; gets the len of height.
-    ;mov r10, rcx      ; moves the len of height to r10.
-
-    ;lea esi, [height] ; loads width into esi.
-    ;mov ecx, r10d     ; moves the len of height into ecx.
-    ;call _string2int ; converts the value of height to an actual integer.
-    ;mov r10d, eax     ; moves the integer value of height to r10d.
     mov rdx, height
     call atoi
     mov r10, rax
@@ -253,6 +237,7 @@ atoi:
 	.done:
 ret
 
+; integer to ascii, input integer should be in ecx and output is stored at rdi.
 itoa:
 	mov ebx, 0xCCCCCCCD             
 	xor rdi, rdi
@@ -274,17 +259,3 @@ itoa:
 	test eax, eax
 	jnz .loop   
 	ret
-
-; Gets the len of a string and returns it to ecx. ; TODO: fix for len > 3
-_getLenChar:
-    push rbx
-    mov ecx,0
-    dec ebx
-    count:
-        inc ecx
-        inc ebx
-        cmp byte[ebx], 0
-        jnz count
-    sub ecx, 2
-    pop rbx
-    ret

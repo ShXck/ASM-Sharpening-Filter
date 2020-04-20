@@ -81,14 +81,11 @@ def build_new_image(out_file):
 
         for i in range(0, len(int_arr)):
             if int_arr[i] == val_for_neg:
-                int_arr[i] = gen_neg()
+                int_arr[i] = random.randrange(-500, -1)
 
         return int_arr
         
-def gen_neg():
-    return random.randrange(-500, -1)
-    
-
+        
 def set_out_names(og_name):
     og_name_splt = og_name.split('.')
     
