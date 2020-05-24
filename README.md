@@ -7,6 +7,11 @@
 ```sh
 $ uname -a
 ```
+
+Se observará un mensaje similar al siguiente, donde deberíamos verificar que la parte resaltada aparezca:
+```sh
+Linux userpc 5.3.0-51-generic #44~18.04.2-Ubuntu SMP Thu Apr 23 14:27:18 UTC 2020 **x86_64 x86_64 x86_64** GNU/Linux
+```
 - **NASM Assembly**. Se utilizó NASM para el desarrollo y ejecución del filtro. Para la instalación escribir los siguientes comandos en la terminal.
  ```sh
 $ sudo apt update
@@ -19,7 +24,7 @@ $ sudo apt-get install nasm
 ext install 13xforever.language-x86-64-assembly
 ```
 ### Visualizaciones
-
+  - **Intalación.** Se proveen archivos .sh para instalar las dependencias si ya se tiene python o en caso contrario, otro archivo para instalar python con las dependencias. 
   - **Python**. Se utiliza un script de python para recibir la imagen de entrada y para visualizar los resultados producidos. Para instalar python en Linux, escriba el siguiente comando en la terminal.
  ```sh
 $ sudo apt-get update
