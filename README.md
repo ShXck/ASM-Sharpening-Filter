@@ -25,6 +25,19 @@ ext install 13xforever.language-x86-64-assembly
 ```
 ### Visualizaciones
   - **Intalación.** Se proveen archivos .sh para instalar las dependencias si ya se tiene python o en caso contrario, otro archivo para instalar python con las dependencias. 
+- Para instalar python + las bibliotecas correr los siguientes comandos en la terminal:
+ ```sh
+$ chmod +x python+libraries.sh
+$ ./python+libraries.sh
+```
+- Para instalar solo las bibliotecas:
+ ```sh
+$ chmod +x libraries.sh
+$ ./libraries.sh
+```
+
+- Para instalar bibliotecas por separado leer los siguientes pasos:
+
   - **Python**. Se utiliza un script de python para recibir la imagen de entrada y para visualizar los resultados producidos. Para instalar python en Linux, escriba el siguiente comando en la terminal.
  ```sh
 $ sudo apt-get update
